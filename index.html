@@ -173,9 +173,27 @@
 </div>
 
 <script>
-let capsules = JSON.parse(localStorage.getItem("capsules")) || [];
+const API_URL = "http://127.0.0.1:7000/api/capsules";
 
-function addCapsule() {
+/* ================= LOAD FROM DATABASE ================= */
+async function loadCapsules() {
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    if (data.success) {
+      renderCapsules(data.capsules);
+    } else {
+      alert("Failed to load data from database");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Backend is not running!");
+  }
+}
+
+/* ================= SAVE TO DATABASE ================= */
+async function addCapsule() {
   const email = document.getElementById("email").value.trim();
   const date  = document.getElementById("unlockDate").value;
   const msg   = document.getElementById("message").value.trim();
@@ -190,57 +208,61 @@ function addCapsule() {
   if (!email) {
     emailError.classList.remove("hidden");
     valid = false;
-  } else {
-    emailError.classList.add("hidden");
-  }
+  } else emailError.classList.add("hidden");
 
   // Date validation
   if (!date) {
     dateError.classList.remove("hidden");
     valid = false;
-  } else {
-    dateError.classList.add("hidden");
-  }
+  } else dateError.classList.add("hidden");
 
   // Message validation
   if (!msg) {
     msgError.classList.remove("hidden");
     valid = false;
-  } else {
-    msgError.classList.add("hidden");
-  }
+  } else msgError.classList.add("hidden");
 
   if (!valid) return;
 
-  capsules.push({
-    id: Date.now(),
-    email,
-    unlockDate: date,
-    message: msg,
-    status: "LOCKED"
-  });
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        unlockDate: date,
+        message: msg
+      })
+    });
 
-  localStorage.setItem("capsules", JSON.stringify(capsules));
-  clearForm();
-  renderCapsules();
+    const data = await res.json();
+
+    if (data.success) {
+      clearForm();
+      loadCapsules();   // reload from MySQL
+    } else {
+      alert("Error saving capsule");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Cannot connect to backend!");
+  }
 }
 
-function renderCapsules() {
+/* ================= DISPLAY CAPSULES ================= */
+function renderCapsules(capsules) {
   const box = document.getElementById("capsules");
   box.innerHTML = "";
 
-  const today = new Date().toISOString().split("T")[0];
-
   capsules.forEach(c => {
-    if (today >= c.unlockDate) c.status = "UNLOCKED";
-
     const card = document.createElement("div");
+
     card.className =
       "bg-slate-900/80 p-5 rounded-xl border border-slate-700 shadow-lg flex flex-col gap-3";
 
     card.innerHTML = `
       <p class="text-xs text-cyan-400 break-all">${c.email}</p>
-      <p class="text-[10px] text-slate-400">Unlock Date: ${c.unlockDate}</p>
+      <p class="text-[10px] text-slate-400">Unlock Date: ${c.unlock_date}</p>
 
       <div class="bg-black/40 p-3 rounded text-xs min-h-[70px]">
         ${c.status === "UNLOCKED"
@@ -263,28 +285,33 @@ function renderCapsules() {
     box.appendChild(card);
   });
 
-  localStorage.setItem("capsules", JSON.stringify(capsules));
-
   requestAnimationFrame(() => {
     box.scrollTop = box.scrollHeight;
   });
 }
 
-function deleteCapsule(id) {
-  capsules = capsules.filter(c => c.id !== id);
-  localStorage.setItem("capsules", JSON.stringify(capsules));
-  renderCapsules();
+/* ================= DELETE FROM DATABASE ================= */
+async function deleteCapsule(id) {
+  try {
+    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    loadCapsules();
+  } catch (err) {
+    console.error(err);
+    alert("Delete failed");
+  }
 }
 
+/* ================= CLEAR FORM ================= */
 function clearForm() {
   document.getElementById("email").value = "";
   document.getElementById("unlockDate").value = "";
   document.getElementById("message").value = "";
 }
 
-renderCapsules();
+/* ================= INITIAL LOAD ================= */
+loadCapsules();
 
-/* Hide errors on typing */
+/* ================= HIDE ERRORS ON TYPING ================= */
 ["email", "unlockDate", "message"].forEach(id => {
   document.getElementById(id).addEventListener("input", () => {
     document.getElementById("emailError").classList.add("hidden");
@@ -292,6 +319,7 @@ renderCapsules();
     document.getElementById("msgError").classList.add("hidden");
   });
 });
+
 
 /* PARTICLES CONFIG */
 particlesJS("particles-js", {

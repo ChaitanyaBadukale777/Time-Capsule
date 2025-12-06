@@ -3,7 +3,7 @@
 import mysql.connector
 
 # 🔧 CHANGE THESE ACCORDING TO YOUR MYSQL SETUP
-DB_HOST = "localhost"
+DB_HOST = "127.0.0.1"
 DB_USER = "root"
 DB_PASSWORD = "root123"
 DB_NAME = "digital_time_capsule"

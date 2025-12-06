@@ -1,14 +1,15 @@
-# backend/scheduler.py
-
-import time
 from datetime import date
+import time
 import schedule
+
 from db_config import get_connection
 from email_service import send_unlock_email
 
 
 def check_and_unlock_capsules():
     today_str = str(date.today())
+    print(f"[SCHEDULER] Checking capsules for date <= {today_str}")
+
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -24,28 +25,32 @@ def check_and_unlock_capsules():
         )
         rows = cursor.fetchall()
 
+        if not rows:
+            print("[SCHEDULER] No capsules to unlock.")
+        else:
+            print(f"[SCHEDULER] Found {len(rows)} capsule(s) to unlock.")
+
         for row in rows:
             capsule_id = row["id"]
             email = row["email"]
             msg = row["message"]
-            unlock_date = str(row["unlock_date"])
+            unlock_date_str = str(row["unlock_date"])
 
             # Send email
-            send_unlock_email(email, msg, unlock_date)
+            ok = send_unlock_email(email, msg, unlock_date_str)
 
-            # Update status to UNLOCKED in DB
-            cursor.execute(
-                "UPDATE capsules SET status = 'UNLOCKED' WHERE id = %s",
-                (capsule_id,)
-            )
+            # If email sent, update DB status
+            if ok:
+                cursor.execute(
+                    "UPDATE capsules SET status = 'UNLOCKED' WHERE id = %s",
+                    (capsule_id,)
+                )
+                print(f"[SCHEDULER] Capsule {capsule_id} marked as UNLOCKED.")
 
         conn.commit()
 
-        if rows:
-            print(f"Unlocked & notified {len(rows)} capsule(s).")
-
     except Exception as e:
-        print("Error in scheduler:", e)
+        print("[SCHEDULER ERROR]", e)
         conn.rollback()
 
     finally:
@@ -57,10 +62,10 @@ def main():
     # Run once at startup
     check_and_unlock_capsules()
 
-    # Schedule daily at 09:00
+    # Then schedule it daily at 09:00 AM
     schedule.every().day.at("09:00").do(check_and_unlock_capsules)
 
-    print("Scheduler started. Waiting for unlock time...")
+    print("[SCHEDULER] Started. Waiting for next run...")
     while True:
         schedule.run_pending()
         time.sleep(60)
