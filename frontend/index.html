@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Digital Time Capsule</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Pixel Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- Particles -->
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #020617, #000);
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    .glass {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 0 50px rgba(34,211,238,0.35);
+    }
+
+    .field {
+      position: relative;
+    }
+
+    .field input, .field textarea {
+      background: transparent;
+      border: 1px solid #334155;
+      outline: none;
+    }
+
+    .field label {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 12px;
+      pointer-events: none;
+      background: #0f172a;
+      padding: 0 6px;
+      transition: 0.3s;
+    }
+
+    .field input:focus + label,
+    .field input:not(:placeholder-shown) + label,
+    .field textarea:focus + label,
+    .field textarea:not(:placeholder-shown) + label {
+      top: -8px;
+      font-size: 10px;
+      color: #22d3ee;
+    }
+
+    #capsules {
+      box-sizing: border-box;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+    /* MAIN GLASS SCROLLBAR */
+    .glass::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .glass::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px;   
+      margin: 12px;         
+    }
+    
+    .glass::-webkit-scrollbar-thumb {
+      background: linear-gradient(
+        180deg,
+        #22d3ee,
+        #0ea5e9
+      );
+      border-radius: 20px;  
+      border: 2px solid rgba(15,23,42,0.8); 
+    }
+
+
+  </style>
+</head>
+
+<body class="text-white min-h-screen overflow-hidden">
+
+<!-- PARTICLES -->
+<div id="particles-js" class="fixed inset-0 -z-10 blur-sm"></div>
+
+<!-- WELCOME -->
+<div class="w-full text-center mt-10 mb-6">
+  <h2 class="text-2xl md:text-3xl font-bold text-cyan-300 animate-pulse">
+    Welcome to Our Portal
+  </h2>
+  <p class="text-slate-400 text-xs mt-2">
+    Preserve your future memories in a secure digital space
+  </p>
+</div>
+
+<!-- MAIN APP -->
+<div class="min-h-screen flex items-center justify-center px-4">
+  <div class="glass w-full max-w-5xl p-10 rounded-3xl max-h-[85vh] overflow-y-auto scroll-smooth">
+
+
+    <h1 class="text-3xl text-center text-cyan-400 mb-2">
+      Digital Time Capsule
+    </h1>
+    <p class="text-center text-slate-400 mb-8 text-xs">
+      Write a message for your future self & unlock it automatically
+    </p>
+
+    <!-- INPUTS -->
+    <div class="grid md:grid-cols-3 gap-5 mb-3">
+
+      <!-- Email -->
+      <div class="field">
+        <input id="email" type="email" placeholder=" "
+          class="w-full p-3 rounded text-white">
+        <label>Your Email</label>
+        <p id="emailError" class="text-red-500 text-[10px] mt-1 hidden">
+          Please enter Email
+        </p>
+      </div>
+
+      <!-- Date -->
+      <div class="field">
+        <input id="unlockDate" type="date" placeholder=" "
+          class="w-full p-3 rounded text-white">
+        <label>Unlock Date</label>
+        <p id="dateError" class="text-red-500 text-[10px] mt-1 hidden">
+          Please enter Date
+        </p>
+      </div>
+
+      <!-- Button -->
+      <button onclick="addCapsule()"
+        class="bg-cyan-500 hover:bg-cyan-600 p-3 rounded font-semibold shadow-md">
+        Save Capsule
+      </button>
+
+    </div>
+
+    <!-- Message -->
+    <div class="field mt-6 mb-6">
+      <textarea id="message" placeholder=" "
+        class="w-full p-3 rounded text-white h-28 resize-none"></textarea>
+      <label>Your Future Message</label>
+
+      <p id="msgError" class="text-red-500 text-[10px] mt-1 hidden">
+        Please enter Message
+      </p>
+    </div>
+
+    <!-- Capsules -->
+    <h2 class="text-lg mb-3 text-cyan-300">Your Capsules</h2>
+
+    <div id="capsules"
+      class="grid md:grid-cols-2 gap-5 pr-3 pb-4">
+    </div>
+
+  </div>
+</div>
+
+<script>
+let capsules = JSON.parse(localStorage.getItem("capsules")) || [];
+
+function addCapsule() {
+  const email = document.getElementById("email").value.trim();
+  const date  = document.getElementById("unlockDate").value;
+  const msg   = document.getElementById("message").value.trim();
+
+  const emailError = document.getElementById("emailError");
+  const dateError  = document.getElementById("dateError");
+  const msgError   = document.getElementById("msgError");
+
+  let valid = true;
+
+  // Email validation
+  if (!email) {
+    emailError.classList.remove("hidden");
+    valid = false;
+  } else {
+    emailError.classList.add("hidden");
+  }
+
+  // Date validation
+  if (!date) {
+    dateError.classList.remove("hidden");
+    valid = false;
+  } else {
+    dateError.classList.add("hidden");
+  }
+
+  // Message validation
+  if (!msg) {
+    msgError.classList.remove("hidden");
+    valid = false;
+  } else {
+    msgError.classList.add("hidden");
+  }
+
+  if (!valid) return;
+
+  capsules.push({
+    id: Date.now(),
+    email,
+    unlockDate: date,
+    message: msg,
+    status: "LOCKED"
+  });
+
+  localStorage.setItem("capsules", JSON.stringify(capsules));
+  clearForm();
+  renderCapsules();
+}
+
+function renderCapsules() {
+  const box = document.getElementById("capsules");
+  box.innerHTML = "";
+
+  const today = new Date().toISOString().split("T")[0];
+
+  capsules.forEach(c => {
+    if (today >= c.unlockDate) c.status = "UNLOCKED";
+
+    const card = document.createElement("div");
+    card.className =
+      "bg-slate-900/80 p-5 rounded-xl border border-slate-700 shadow-lg flex flex-col gap-3";
+
+    card.innerHTML = `
+      <p class="text-xs text-cyan-400 break-all">${c.email}</p>
+      <p class="text-[10px] text-slate-400">Unlock Date: ${c.unlockDate}</p>
+
+      <div class="bg-black/40 p-3 rounded text-xs min-h-[70px]">
+        ${c.status === "UNLOCKED"
+          ? c.message
+          : '<span class="text-yellow-400">🔒 Locked until unlock date</span>'}
+      </div>
+
+      <div class="flex justify-between items-center text-[10px] mt-2">
+        <span class="${c.status === "UNLOCKED" ? "text-green-400" : "text-red-400"}">
+          ${c.status}
+        </span>
+
+        <button onclick="deleteCapsule(${c.id})"
+          class="text-red-400 hover:text-red-500">
+          Delete
+        </button>
+      </div>
+    `;
+
+    box.appendChild(card);
+  });
+
+  localStorage.setItem("capsules", JSON.stringify(capsules));
+
+  requestAnimationFrame(() => {
+    box.scrollTop = box.scrollHeight;
+  });
+}
+
+function deleteCapsule(id) {
+  capsules = capsules.filter(c => c.id !== id);
+  localStorage.setItem("capsules", JSON.stringify(capsules));
+  renderCapsules();
+}
+
+function clearForm() {
+  document.getElementById("email").value = "";
+  document.getElementById("unlockDate").value = "";
+  document.getElementById("message").value = "";
+}
+
+renderCapsules();
+
+/* Hide errors on typing */
+["email", "unlockDate", "message"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    document.getElementById("emailError").classList.add("hidden");
+    document.getElementById("dateError").classList.add("hidden");
+    document.getElementById("msgError").classList.add("hidden");
+  });
+});
+
+/* PARTICLES CONFIG */
+particlesJS("particles-js", {
+  particles: {
+    number: { value: 80 },
+    color: { value: "#22d3ee" },
+    shape: { type: "circle" },
+    opacity: { value: 0.6 },
+    size: { value: 3 },
+    move: { enable: true, speed: 1.5 },
+    line_linked: {
+      enable: true,
+      distance: 140,
+      color: "#22d3ee",
+      opacity: 0.4,
+      width: 1
+    }
+  },
+  retina_detect: true
+});
+</script>
+
+</body>
+</html>
